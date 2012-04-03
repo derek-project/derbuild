@@ -5,13 +5,17 @@ import logging, logging.config
 
 from optparse import OptionParser
 from pkg_resources import iter_entry_points
-from ConfigParser import SafeConfigParser as ConfigParser, NoSectionError
+from ConfigParser import SafeConfigParser as ConfigParser, NoSectionError, \
+        NoOptionError
+
+from derbuild import DerbuildError
 
 LOG = logging.getLogger(__name__)
 
 DERBUILD_SECTION = "derbuild"
 
 LOGCONFIG_OPT = "logconfig"
+WORKDIR_OPT   = "workdir"
 
 PKG_DEB = "deb"
 
@@ -28,7 +32,10 @@ def parse_cmdline():
     parser.add_option("-t", "--type", dest="type", default="auto",
                       choices=["auto", PKG_DEB],
                       help="type of packaging")
-    parser.add_option("-L", "--log-config", dest="logconfig",
+    parser.add_option("-w", "--workdir", dest=WORKDIR_OPT,
+                      help="path to working directory where to unpack source "
+                           "package")
+    parser.add_option("-L", "--log-config", dest=LOGCONFIG_OPT,
                       help="path to logger config file")
     parser.add_option("-d", "--debug", dest="debug", action="store_true",
                       help="show debug output")
@@ -40,16 +47,39 @@ def parse_cmdline():
         parser.print_help()
         sys.exit(1)
 
-    opt_dict = {}
-    if options.logconfig:
-        opt_dict[LOGCONFIG_OPT] = options.logconfig
+    opt_dict = dict([(opt, options.__dict__[opt])
+                     for opt in options.__dict__ if options.__dict__[opt]])
 
     return options, opt_dict, srcpkg_path
 
 def init_mimetypes():
     """Register known file types."""
     mimetypes.init()
-    mimetypes.add_type('application/x-debian-sources-descriptor', '.dsc')
+    mimetypes.add_type('application/x-debian-source-control', '.dsc')
+
+def get_source_package(ptype, path, workdir):
+    """Return source package object."""
+
+    if not os.path.exists(path):
+        raise DerbuildError("No such file: %s" % path)
+
+    # Detect the type of the package
+    if ptype != 'auto':
+        mimetp = TYPEMAP[ptype]
+    else:
+        init_mimetypes()
+        mimetp, _ = mimetypes.guess_type(path)
+
+    srcpkg = None
+    for entry in iter_entry_points(group='srcpkgs', name=mimetp):
+        LOG.debug("found entry %r" % entry)
+        cls = entry.load()
+        srcpkg = cls(path=path, workdir=workdir)
+        break
+    if not srcpkg:
+        LOG.error("no handler found for the type '%s'" % mimetp)
+        sys.exit(1)
+    return srcpkg
 
 def main():
     """Entry point."""
@@ -63,7 +93,7 @@ def main():
         try:
             logconfig = config.get(DERBUILD_SECTION, LOGCONFIG_OPT,
                                    vars=overrides)
-        except NoSectionError:
+        except (NoSectionError, NoOptionError):
             if config.has_section("loggers"):
                 logconfig = config.config
 
@@ -87,20 +117,10 @@ def main():
             logging.basicConfig(level=logging.WARNING)
     LOG.debug("logging initialized")
 
-    # Detect the type of the package
-    if options.type != 'auto':
-        pkgtype = TYPEMAP[options.type]
-    else:
-        init_mimetypes()
-        pkgtype, _ = mimetypes.guess_type(srcpkg_path)
+    # TODO: unify getting option values
+    try:
+        workdir = config.get(DERBUILD_SECTION, WORKDIR_OPT, vars=overrides)
+    except (NoSectionError, NoOptionError):
+        workdir = "."
 
-    # Load handler for the source package
-    srcpkg = None
-    for entry in iter_entry_points(group='srcpkgs', name=pkgtype):
-        LOG.debug("found entry %r" % entry)
-        cls = entry.load()
-        srcpkg = cls()
-        break
-    if not srcpkg:
-        LOG.error("no handler found for the type '%s'" % pkgtype)
-        sys.exit(1)
+    srcpkg = get_source_package(options.type, srcpkg_path, workdir)

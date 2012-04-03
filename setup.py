@@ -28,7 +28,7 @@ setup(
             ],
         'srcpkgs':
             [
-                'application/x-debian-sources-descriptor = derbuild.debpackage:DebPackage'
+                'application/x-debian-source-control = derbuild.debpackage:DebPackage'
             ]
     },
     test_suite = "tests",
