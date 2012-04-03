@@ -90,10 +90,12 @@ def main():
     if os.path.exists(options.config):
         config = ConfigParser()
         config.read(options.config)
+        if not config.has_section(DERBUILD_SECTION):
+            config.add_section(DERBUILD_SECTION)
         try:
             logconfig = config.get(DERBUILD_SECTION, LOGCONFIG_OPT,
                                    vars=overrides)
-        except (NoSectionError, NoOptionError):
+        except NoOptionError:
             if config.has_section("loggers"):
                 logconfig = config.config
 
@@ -120,7 +122,9 @@ def main():
     # TODO: unify getting option values
     try:
         workdir = config.get(DERBUILD_SECTION, WORKDIR_OPT, vars=overrides)
-    except (NoSectionError, NoOptionError):
+    except NoOptionError:
         workdir = "."
 
     srcpkg = get_source_package(options.type, srcpkg_path, workdir)
+
+    srcpkg.unpack()
