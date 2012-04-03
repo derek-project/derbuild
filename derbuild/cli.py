@@ -128,3 +128,4 @@ def main():
     srcpkg = get_source_package(options.type, srcpkg_path, workdir)
 
     srcpkg.unpack()
+    srcpkg.build()
