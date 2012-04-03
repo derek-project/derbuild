@@ -2,6 +2,7 @@ import logging
 import deb822
 
 from derbuild import DerbuildError
+from derbuild.utils import call
 
 LOG = logging.getLogger(__name__)
 
@@ -23,4 +24,6 @@ class DebPackage(object):
 
     def unpack(self):
         """Create build tree in working directory."""
-        pass
+
+        LOG.debug("unpack")
+        call(["dpkg-source", "-x", self.dsc_path], cwd=self.workdir)
