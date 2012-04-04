@@ -9,6 +9,7 @@ from ConfigParser import SafeConfigParser as ConfigParser, NoSectionError, \
         NoOptionError
 
 from derbuild import DerbuildError
+from derbuild.buildenv import BuildEnvironment
 
 LOG = logging.getLogger(__name__)
 
@@ -16,6 +17,8 @@ DERBUILD_SECTION = "derbuild"
 
 LOGCONFIG_OPT = "logconfig"
 WORKDIR_OPT   = "workdir"
+ROOTDIR_OPT   = "rootdir"
+ROOTSTRAP_OPT = "rootstrap"
 
 PKG_DEB = "deb"
 
@@ -39,6 +42,10 @@ def parse_cmdline():
                       help="path to logger config file")
     parser.add_option("-d", "--debug", dest="debug", action="store_true",
                       help="show debug output")
+    parser.add_option("-R", "--rootdir", dest=ROOTDIR_OPT,
+                      help="path proot's root")
+    parser.add_option("-r", "--rootstrap", dest=ROOTSTRAP_OPT,
+                      help="URI to rootstrap tarball")
 
     try:
         options, [srcpkg_path] = parser.parse_args()
@@ -124,6 +131,18 @@ def main():
         workdir = config.get(DERBUILD_SECTION, WORKDIR_OPT, vars=overrides)
     except NoOptionError:
         workdir = "."
+    try:
+        rootdir = config.get(DERBUILD_SECTION, ROOTDIR_OPT, vars=overrides)
+    except NoOptionError:
+        rootdir = "."
+    try:
+        rootstrap = config.get(DERBUILD_SECTION, ROOTSTRAP_OPT, vars=overrides)
+    except NoOptionError:
+        LOG.error("No rootstrap specified. Exiting...")
+        sys.exit(1)
+
+    env = BuildEnvironment(rootdir)
+    env.setup(rootstrap)
 
     pkg = get_package(options.type, srcpkg_path, workdir)
 
