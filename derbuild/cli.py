@@ -57,7 +57,7 @@ def init_mimetypes():
     mimetypes.init()
     mimetypes.add_type('application/x-debian-source-control', '.dsc')
 
-def get_source_package(ptype, path, workdir):
+def get_package(ptype, path, workdir):
     """Return source package object."""
 
     if not os.path.exists(path):
@@ -70,16 +70,16 @@ def get_source_package(ptype, path, workdir):
         init_mimetypes()
         mimetp, _ = mimetypes.guess_type(path)
 
-    srcpkg = None
+    pkg = None
     for entry in iter_entry_points(group='srcpkgs', name=mimetp):
         LOG.debug("found entry %r" % entry)
         cls = entry.load()
-        srcpkg = cls(path=path, workdir=workdir)
+        pkg = cls(path=path, workdir=workdir)
         break
-    if not srcpkg:
+    if not pkg:
         LOG.error("no handler found for the type '%s'" % mimetp)
         sys.exit(1)
-    return srcpkg
+    return pkg
 
 def main():
     """Entry point."""
@@ -125,7 +125,7 @@ def main():
     except NoOptionError:
         workdir = "."
 
-    srcpkg = get_source_package(options.type, srcpkg_path, workdir)
+    pkg = get_package(options.type, srcpkg_path, workdir)
 
-    srcpkg.unpack()
-    srcpkg.build()
+    pkg.unpack()
+    pkg.build()
