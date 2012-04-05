@@ -94,8 +94,8 @@ def main():
     logconfig = None
     options, overrides, srcpkg_path = parse_cmdline()
 
+    config = ConfigParser()
     if os.path.exists(options.config):
-        config = ConfigParser()
         config.read(options.config)
         if not config.has_section(DERBUILD_SECTION):
             config.add_section(DERBUILD_SECTION)
@@ -105,6 +105,8 @@ def main():
         except NoOptionError:
             if config.has_section("loggers"):
                 logconfig = config.config
+    else:
+        config.add_section(DERBUILD_SECTION)
 
     # Initialize logging:
     # 1. try to find settings for logging
