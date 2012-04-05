@@ -35,11 +35,14 @@ class BuildEnvironment(object):
     def execute(self, cmd, cwd):
         """Execute given command inside environment."""
 
-        fullcmd = "proot -Q %(qemu)s -w %(cwd)s %(rootdir)s %(cmd)s" % {
+        fullcmd = "proot -Q %(qemu)s -b /usr/bin/m4 -b /opt -w %(cwd)s %(rootdir)s %(cmd)s" % {
             "qemu": ARCH_QEMU_MAP[self.arch],
             "rootdir": self.rootdir,
             "cwd": cwd,
             "cmd": cmd
         }
         LOG.debug("Executing `%s` inside env" % fullcmd)
-        call(fullcmd.split())
+        env = os.environ
+        env['LANG'] = 'C'
+        env['CC'] = '/opt/arm-2011.09-gnueabi/bin/arm-none-linux-gnueabi-gcc'
+        call(fullcmd.split(), env=env)
