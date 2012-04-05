@@ -21,5 +21,6 @@ class BuildEnvironment(object):
             os.makedirs(self.rootdir)
 
         if rootstrap:
-            with tarfile.open(rootstrap) as tgz:
-                tgz.extractall(path=self.rootdir)
+            tgz = tarfile.open(rootstrap)
+            tgz.extractall(path=self.rootdir)
+            tgz.close()
