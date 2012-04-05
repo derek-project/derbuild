@@ -19,6 +19,7 @@ LOGCONFIG_OPT = "logconfig"
 WORKDIR_OPT   = "workdir"
 ROOTDIR_OPT   = "rootdir"
 ROOTSTRAP_OPT = "rootstrap"
+ARCH_OPT      = "arch"
 
 PKG_DEB = "deb"
 
@@ -35,6 +36,8 @@ def parse_cmdline():
     parser.add_option("-t", "--type", dest="type", default="auto",
                       choices=["auto", PKG_DEB],
                       help="type of packaging")
+    parser.add_option("-a", "--arch", dest=ARCH_OPT,
+                      help="target architecture")
     parser.add_option("-w", "--workdir", dest=WORKDIR_OPT,
                       help="path to working directory where to unpack source "
                            "package")
@@ -64,7 +67,7 @@ def init_mimetypes():
     mimetypes.init()
     mimetypes.add_type('application/x-debian-source-control', '.dsc')
 
-def get_package(ptype, path, workdir):
+def get_package(ptype, path, workdir, env):
     """Return source package object."""
 
     if not os.path.exists(path):
@@ -81,7 +84,7 @@ def get_package(ptype, path, workdir):
     for entry in iter_entry_points(group='srcpkgs', name=mimetp):
         LOG.debug("found entry %r" % entry)
         cls = entry.load()
-        pkg = cls(path=path, workdir=workdir)
+        pkg = cls(path=path, workdir=workdir, env=env)
         break
     if not pkg:
         LOG.error("no handler found for the type '%s'" % mimetp)
@@ -142,11 +145,16 @@ def main():
     except NoOptionError:
         LOG.error("No rootstrap specified. Exiting...")
         sys.exit(1)
+    try:
+        arch = config.get(DERBUILD_SECTION, ARCH_OPT, vars=overrides)
+    except NoOptionError:
+        LOG.error("No target architecture specified. Exiting...")
+        sys.exit(1)
 
-    env = BuildEnvironment(rootdir)
+    env = BuildEnvironment(arch, rootdir)
     env.setup(rootstrap)
 
-    pkg = get_package(options.type, srcpkg_path, workdir)
+    pkg = get_package(options.type, srcpkg_path, workdir, env)
 
     pkg.unpack()
     pkg.build()
