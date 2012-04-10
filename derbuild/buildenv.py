@@ -24,14 +24,20 @@ class BuildEnvironment(object):
     def setup(self, rootstrap=None):
         """Set up environment."""
 
+        def env_members(members):
+            for tarinfo in members:
+                if tarinfo.isdev():
+                    continue
+                yield tarinfo
+
         LOG.debug("rootdir: %s" % self.rootdir)
         if os.path.isdir(self.rootdir):
             shutil.rmtree(self.rootdir)
         os.makedirs(self.rootdir)
 
         if rootstrap:
-            tgz = tarfile.open(rootstrap)
-            tgz.extractall(path=self.rootdir)
+            tgz = tarfile.open(rootstrap, 'r|*')
+            tgz.extractall(path=self.rootdir, members=env_members(tgz))
             tgz.close()
 
     def execute(self, cmd, cwd):
