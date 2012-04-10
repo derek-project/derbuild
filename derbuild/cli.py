@@ -20,6 +20,7 @@ WORKDIR_OPT   = "workdir"
 ROOTDIR_OPT   = "rootdir"
 ROOTSTRAP_OPT = "rootstrap"
 ARCH_OPT      = "arch"
+OVERDIR_OPT   = "overdir"
 
 PKG_DEB = "deb"
 
@@ -49,6 +50,8 @@ def parse_cmdline():
                       help="path proot's root")
     parser.add_option("-r", "--rootstrap", dest=ROOTSTRAP_OPT,
                       help="URI to rootstrap tarball")
+    parser.add_option("-O", "--overdir", dest=OVERDIR_OPT,
+                      help="path to file system tree with files to override")
 
     try:
         options, [srcpkg_path] = parser.parse_args()
@@ -150,9 +153,13 @@ def main():
     except NoOptionError:
         LOG.error("No target architecture specified. Exiting...")
         sys.exit(1)
+    try:
+        overdir = config.get(DERBUILD_SECTION, OVERDIR_OPT, vars=overrides)
+    except NoOptionError:
+        overdir = None
 
     env = BuildEnvironment(arch, rootdir)
-    env.setup(rootstrap)
+    env.setup(rootstrap, overdir)
 
     pkg = get_package(options.type, srcpkg_path, workdir, env)
 

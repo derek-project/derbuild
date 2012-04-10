@@ -21,7 +21,7 @@ class BuildEnvironment(object):
         self.rootdir = rootdir
         self.arch    = arch
 
-    def setup(self, rootstrap=None):
+    def setup(self, rootstrap=None, overides=None):
         """Set up environment."""
 
         def env_members(members):
@@ -39,6 +39,18 @@ class BuildEnvironment(object):
             tgz = tarfile.open(rootstrap, 'r|*')
             tgz.extractall(path=self.rootdir, members=env_members(tgz))
             tgz.close()
+
+        if overrides:
+            if not overrides.endswith("/"):
+                overrides = overrides + "/"
+            for root, _, files in os.walk(overrides, topdown=False):
+                reldir = root.split(overrides)[1]
+                targetdir = os.path.join(self.rootdir, reldir)
+                if not os.path.isdir(targetdir):
+                    os.makedirs(targetdir)
+                    for fname in files:
+                        shutil.copyfile(os.path.join(root, fname),
+                                        os.path.join(targetdir, fname))
 
     def execute(self, cmd, cwd):
         """Execute given command inside environment."""
