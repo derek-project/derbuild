@@ -1,6 +1,7 @@
 import logging
 import tarfile
 import os
+import shutil
 import os.path
 
 from derbuild.utils import call
@@ -24,8 +25,9 @@ class BuildEnvironment(object):
         """Set up environment."""
 
         LOG.debug("rootdir: %s" % self.rootdir)
-        if not os.path.isdir(self.rootdir):
-            os.makedirs(self.rootdir)
+        if os.path.isdir(self.rootdir):
+            shutil.rmtree(self.rootdir)
+        os.makedirs(self.rootdir)
 
         if rootstrap:
             tgz = tarfile.open(rootstrap)
