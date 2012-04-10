@@ -59,5 +59,6 @@ class DebPackage(object):
         LOG.debug("build")
         builddir = os.path.join(self.workdir, "%s-%s" %
                                              (self.name, self.version_upstream))
+        self.env.execute("apt-get -y update", cwd=builddir)
         self.env.execute(self.install_deps_cmd, cwd=builddir)
         self.env.execute("dpkg-buildpackage -rfakeroot", cwd=builddir)
