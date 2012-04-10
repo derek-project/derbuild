@@ -55,7 +55,7 @@ class BuildEnvironment(object):
     def execute(self, cmd, cwd):
         """Execute given command inside environment."""
 
-        fullcmd = "proot -Q %(qemu)s -b /usr/bin/m4 -b /opt -w %(cwd)s %(rootdir)s %(cmd)s" % {
+        fullcmd = "proot -Q %(qemu)s -b /opt -w %(cwd)s %(rootdir)s %(cmd)s" % {
             "qemu": ARCH_QEMU_MAP[self.arch],
             "rootdir": self.rootdir,
             "cwd": cwd,
