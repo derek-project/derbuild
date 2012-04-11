@@ -63,8 +63,8 @@ def parse_cmdline():
                       default=[],
                       help="path on host system to make accessible inside "
                            "build environment")
-    parse.add_option("-o", "--outdir", dest=OUTDIR_OPT,
-                     help="directory where to put built artifacts")
+    parser.add_option("-o", "--outdir", dest=OUTDIR_OPT,
+                      help="directory where to put built artifacts")
 
     try:
         options, [srcpkg_path] = parser.parse_args()
