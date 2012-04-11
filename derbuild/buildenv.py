@@ -76,3 +76,8 @@ class BuildEnvironment(object):
         env = os.environ
         env.update(self.envvars)
         call(fullcmd.split(), env=env)
+
+    def destroy(self):
+        """Do clean up."""
+
+        shutil.rmtree(self.rootdir)

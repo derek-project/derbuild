@@ -62,3 +62,12 @@ class DebPackage(object):
         self.env.execute("apt-get -y update", cwd=builddir)
         self.env.execute(self.install_deps_cmd, cwd=builddir)
         self.env.execute("dpkg-buildpackage -rfakeroot", cwd=builddir)
+
+    def get_artifacts(self, outdir):
+        """Copy built artifacts to given output directory."""
+
+        artifacts = [os.path.join(self.workdir, fname)
+                     for fname in os.listdir(self.workdir)
+                     if os.path.isfile(os.path.join(self.workdir, fname))]
+        for artifact in artifacts:
+            shutil.copy(artifact, outdir)

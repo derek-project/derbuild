@@ -1,6 +1,7 @@
 import sys
 import os.path
 import mimetypes
+import shutil
 import logging, logging.config
 
 from optparse import OptionParser
@@ -22,7 +23,8 @@ ROOTSTRAP_OPT = "rootstrap"
 ARCH_OPT      = "arch"
 OVERDIR_OPT   = "overdir"
 ENVIRON_OPT   = "envvars"
-BIND_OPT      = "bind"
+BINDS_OPT      = "binds"
+OUTDIR_OPT    = "outdir"
 
 PKG_DEB = "deb"
 
@@ -57,10 +59,12 @@ def parse_cmdline():
     parser.add_option("-e", "--environment", dest=ENVIRON_OPT,
                       help="comma-separated list of environment variables to be"
                            " used inside build environment")
-    parser.add_option("-b", "--bind", dest=BIND_OPT, action="append",
+    parser.add_option("-b", "--bind", dest=BINDS_OPT, action="append",
                       default=[],
                       help="path on host system to make accessible inside "
                            "build environment")
+    parse.add_option("-o", "--outdir", dest=OUTDIR_OPT,
+                     help="directory where to put built artifacts")
 
     try:
         options, [srcpkg_path] = parser.parse_args()
@@ -152,21 +156,31 @@ def main():
     try:
         workdir = config.get(DERBUILD_SECTION, WORKDIR_OPT, vars=overrides)
     except NoOptionError:
-        workdir = "."
+        LOG.error("No working directory specified. Exiting...")
+        sys.exit(1)
+
     try:
         rootdir = config.get(DERBUILD_SECTION, ROOTDIR_OPT, vars=overrides)
     except NoOptionError:
         rootdir = "."
+
+    try:
+        outdir = config.get(DERBUILD_SECTION, OUTDIR_OPT, vars=overrides)
+    except NoOptionError:
+        outdir = "."
+
     try:
         rootstrap = config.get(DERBUILD_SECTION, ROOTSTRAP_OPT, vars=overrides)
     except NoOptionError:
         LOG.error("No rootstrap specified. Exiting...")
         sys.exit(1)
+
     try:
         arch = config.get(DERBUILD_SECTION, ARCH_OPT, vars=overrides)
     except NoOptionError:
         LOG.error("No target architecture specified. Exiting...")
         sys.exit(1)
+
     try:
         overdir = config.get(DERBUILD_SECTION, OVERDIR_OPT, vars=overrides)
     except NoOptionError:
@@ -184,13 +198,22 @@ def main():
     LOG.debug("effective environment variables: %r" % envvars)
 
     try:
-        confbinds = [bind.strip() for bind in
-                         config.get(DERBUILD_SECTION, BIND_OPT).split(",")]
+        binds = [bind.strip() for bind in
+                         config.get(DERBUILD_SECTION, BINDS_OPT).split(",")]
     except NoOptionError:
-        confbinds = []
-    binds = []
-    binds.extend(confbinds)
-    binds.extend(options.bind)
+        binds = []
+    binds.extend(options.binds)
+    binds.append(workdir)
+
+    # prepare working directory
+    if os.path.exists(workdir):
+        LOG.error("working directory '%s' exists already. Exiting..." % workdir)
+        sys.exit(1)
+    os.makedirs(workdir)
+
+    # prepare output directory
+    if not os.path.isdir(outdir):
+        os.makedirs(outdir)
 
     env = BuildEnvironment(arch, rootdir, envvars, binds)
     env.setup(rootstrap, overdir)
@@ -199,3 +222,7 @@ def main():
 
     pkg.unpack()
     pkg.build()
+    pkg.get_artifacts(outdir)
+
+    env.destroy()
+    shutil.rmtree(workdir)
