@@ -115,6 +115,8 @@ def parse_vars(vars_str):
 def main():
     """Entry point."""
 
+    # 1. Configure
+
     logconfig = None
     options, overrides, srcpkg_path = parse_cmdline()
 
@@ -152,7 +154,7 @@ def main():
             logging.basicConfig(level=logging.WARNING)
     LOG.debug("logging initialized")
 
-    # TODO: unify getting option values
+    # TODO: unify getting option values. Move it to get_effective_options()
     try:
         workdir = config.get(DERBUILD_SECTION, WORKDIR_OPT, vars=overrides)
     except NoOptionError:
@@ -205,6 +207,8 @@ def main():
     binds.extend(options.binds)
     binds.append(workdir)
 
+    # 2. Set up
+
     # prepare working directory
     if os.path.exists(workdir):
         LOG.error("working directory '%s' exists already. Exiting..." % workdir)
@@ -220,9 +224,13 @@ def main():
 
     pkg = get_package(options.type, srcpkg_path, workdir, env)
 
+    # 3. Build
+
     pkg.unpack()
     pkg.build()
     pkg.get_artifacts(outdir)
+
+    # 4. Clean up
 
     env.destroy()
     shutil.rmtree(workdir)
