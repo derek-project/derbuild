@@ -173,14 +173,14 @@ def main():
         overdir = None
 
     try:
-        confenvvars = parse_vars(config.get(DERBUILD_SECTION, ENVIRON_OPT))
+        envvars = parse_vars(config.get(DERBUILD_SECTION, ENVIRON_OPT))
     except NoOptionError:
-        confenvvars = {}
+        envvars = {}
     if ENVIRON_OPT in overrides.keys():
         cmdenvvars = parse_vars(overrides[ENVIRON_OPT])
     else:
         cmdenvvars = {}
-    envvars = confenvvars.update(cmdenvvars)
+    envvars.update(cmdenvvars)
     LOG.debug("effective environment variables: %r" % envvars)
 
     try:
@@ -190,7 +190,7 @@ def main():
         confbinds = []
     binds = []
     binds.extend(confbinds)
-    binds.extend(overrides[BIND_OPT])
+    binds.extend(options.bind)
 
     env = BuildEnvironment(arch, rootdir, envvars, binds)
     env.setup(rootstrap, overdir)
