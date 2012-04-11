@@ -1,3 +1,5 @@
+"""Command line interface to derbuild."""
+
 import sys
 import os.path
 import mimetypes
@@ -6,8 +8,7 @@ import logging, logging.config
 
 from optparse import OptionParser
 from pkg_resources import iter_entry_points
-from ConfigParser import SafeConfigParser as ConfigParser, NoSectionError, \
-        NoOptionError
+from ConfigParser import SafeConfigParser as ConfigParser, NoOptionError
 
 from derbuild import DerbuildError
 from derbuild.buildenv import BuildEnvironment
@@ -112,6 +113,68 @@ def parse_vars(vars_str):
     return dict([[token.strip() for token in var.split("=")]
                                 for var in vars_str.split(",")])
 
+def get_effective_options(options, overrides, config):
+    """Calculate effective configuration."""
+    try:
+        options.workdir = config.get(DERBUILD_SECTION, WORKDIR_OPT,
+                                     vars=overrides)
+    except NoOptionError:
+        LOG.error("No working directory specified. Exiting...")
+        sys.exit(1)
+
+    try:
+        options.rootdir = config.get(DERBUILD_SECTION, ROOTDIR_OPT,
+                                     vars=overrides)
+    except NoOptionError:
+        options.rootdir = "."
+
+    try:
+        options.outdir = config.get(DERBUILD_SECTION, OUTDIR_OPT,
+                                    vars=overrides)
+    except NoOptionError:
+        options.outdir = "."
+
+    try:
+        options.rootstrap = config.get(DERBUILD_SECTION, ROOTSTRAP_OPT,
+                                       vars=overrides)
+    except NoOptionError:
+        LOG.error("No rootstrap specified. Exiting...")
+        sys.exit(1)
+
+    try:
+        options.arch = config.get(DERBUILD_SECTION, ARCH_OPT, vars=overrides)
+    except NoOptionError:
+        LOG.error("No target architecture specified. Exiting...")
+        sys.exit(1)
+
+    try:
+        options.overdir = config.get(DERBUILD_SECTION, OVERDIR_OPT,
+                                     vars=overrides)
+    except NoOptionError:
+        options.overdir = None
+
+    try:
+        options.envvars = parse_vars(config.get(DERBUILD_SECTION, ENVIRON_OPT))
+    except NoOptionError:
+        options.envvars = {}
+    if ENVIRON_OPT in overrides.keys():
+        cmdenvvars = parse_vars(overrides[ENVIRON_OPT])
+    else:
+        cmdenvvars = {}
+    options.envvars.update(cmdenvvars)
+    LOG.debug("effective environment variables: %r" % options.envvars)
+
+    try:
+        binds = [bind.strip() for bind in
+                         config.get(DERBUILD_SECTION, BINDS_OPT).split(",")]
+    except NoOptionError:
+        binds = []
+    binds.extend(options.binds)
+    binds.append(options.workdir)
+    options.binds = binds
+
+    return options
+
 def main():
     """Entry point."""
 
@@ -130,7 +193,7 @@ def main():
                                    vars=overrides)
         except NoOptionError:
             if config.has_section("loggers"):
-                logconfig = config.config
+                logconfig = options.config
     else:
         config.add_section(DERBUILD_SECTION)
 
@@ -144,7 +207,7 @@ def main():
     # 3. otherwise initialize logging with standard basic settings.
     if logconfig:
         logging.config.fileConfig(logconfig, disable_existing_loggers=False)
-        if option.debug:
+        if options.debug:
             rootlogger = logging.getLogger()
             rootlogger.setLevel(logging.DEBUG)
     else:
@@ -154,83 +217,34 @@ def main():
             logging.basicConfig(level=logging.WARNING)
     LOG.debug("logging initialized")
 
-    # TODO: unify getting option values. Move it to get_effective_options()
-    try:
-        workdir = config.get(DERBUILD_SECTION, WORKDIR_OPT, vars=overrides)
-    except NoOptionError:
-        LOG.error("No working directory specified. Exiting...")
-        sys.exit(1)
-
-    try:
-        rootdir = config.get(DERBUILD_SECTION, ROOTDIR_OPT, vars=overrides)
-    except NoOptionError:
-        rootdir = "."
-
-    try:
-        outdir = config.get(DERBUILD_SECTION, OUTDIR_OPT, vars=overrides)
-    except NoOptionError:
-        outdir = "."
-
-    try:
-        rootstrap = config.get(DERBUILD_SECTION, ROOTSTRAP_OPT, vars=overrides)
-    except NoOptionError:
-        LOG.error("No rootstrap specified. Exiting...")
-        sys.exit(1)
-
-    try:
-        arch = config.get(DERBUILD_SECTION, ARCH_OPT, vars=overrides)
-    except NoOptionError:
-        LOG.error("No target architecture specified. Exiting...")
-        sys.exit(1)
-
-    try:
-        overdir = config.get(DERBUILD_SECTION, OVERDIR_OPT, vars=overrides)
-    except NoOptionError:
-        overdir = None
-
-    try:
-        envvars = parse_vars(config.get(DERBUILD_SECTION, ENVIRON_OPT))
-    except NoOptionError:
-        envvars = {}
-    if ENVIRON_OPT in overrides.keys():
-        cmdenvvars = parse_vars(overrides[ENVIRON_OPT])
-    else:
-        cmdenvvars = {}
-    envvars.update(cmdenvvars)
-    LOG.debug("effective environment variables: %r" % envvars)
-
-    try:
-        binds = [bind.strip() for bind in
-                         config.get(DERBUILD_SECTION, BINDS_OPT).split(",")]
-    except NoOptionError:
-        binds = []
-    binds.extend(options.binds)
-    binds.append(workdir)
+    options = get_effective_options(options, overrides, config)
 
     # 2. Set up
 
     # prepare working directory
-    if os.path.exists(workdir):
-        LOG.error("working directory '%s' exists already. Exiting..." % workdir)
+    if os.path.exists(options.workdir):
+        LOG.error("working directory '%s' exists already. Exiting..." %
+                  options.workdir)
         sys.exit(1)
-    os.makedirs(workdir)
+    os.makedirs(options.workdir)
 
     # prepare output directory
-    if not os.path.isdir(outdir):
-        os.makedirs(outdir)
+    if not os.path.isdir(options.outdir):
+        os.makedirs(options.outdir)
 
-    env = BuildEnvironment(arch, rootdir, envvars, binds)
-    env.setup(rootstrap, overdir)
+    env = BuildEnvironment(options.arch, options.rootdir, options.envvars,
+                           options.binds)
+    env.setup(options.rootstrap, options.overdir)
 
-    pkg = get_package(options.type, srcpkg_path, workdir, env)
+    pkg = get_package(options.type, srcpkg_path, options.workdir, env)
 
     # 3. Build
 
     pkg.unpack()
     pkg.build()
-    pkg.get_artifacts(outdir)
+    pkg.get_artifacts(options.outdir)
 
     # 4. Clean up
 
     env.destroy()
-    shutil.rmtree(workdir)
+    shutil.rmtree(options.workdir)
