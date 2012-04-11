@@ -21,6 +21,8 @@ ROOTDIR_OPT   = "rootdir"
 ROOTSTRAP_OPT = "rootstrap"
 ARCH_OPT      = "arch"
 OVERDIR_OPT   = "overdir"
+ENVIRON_OPT   = "envvars"
+BIND_OPT      = "bind"
 
 PKG_DEB = "deb"
 
@@ -52,6 +54,13 @@ def parse_cmdline():
                       help="URI to rootstrap tarball")
     parser.add_option("-O", "--overdir", dest=OVERDIR_OPT,
                       help="path to file system tree with files to override")
+    parser.add_option("-e", "--environment", dest=ENVIRON_OPT,
+                      help="comma-separated list of environment variables to be"
+                           " used inside build environment")
+    parser.add_option("-b", "--bind", dest=BIND_OPT, action="append",
+                      default=[],
+                      help="path on host system to make accessible inside "
+                           "build environment")
 
     try:
         options, [srcpkg_path] = parser.parse_args()
@@ -93,6 +102,11 @@ def get_package(ptype, path, workdir, env):
         LOG.error("no handler found for the type '%s'" % mimetp)
         sys.exit(1)
     return pkg
+
+def parse_vars(vars_str):
+    """Parse string with list of variables."""
+    return dict([[token.strip() for token in var.split("=")]
+                                for var in vars_str.split(",")])
 
 def main():
     """Entry point."""
@@ -158,7 +172,27 @@ def main():
     except NoOptionError:
         overdir = None
 
-    env = BuildEnvironment(arch, rootdir)
+    try:
+        confenvvars = parse_vars(config.get(DERBUILD_SECTION, ENVIRON_OPT))
+    except NoOptionError:
+        confenvvars = {}
+    if ENVIRON_OPT in overrides.keys():
+        cmdenvvars = parse_vars(overrides[ENVIRON_OPT])
+    else:
+        cmdenvvars = {}
+    envvars = confenvvars.update(cmdenvvars)
+    LOG.debug("effective environment variables: %r" % envvars)
+
+    try:
+        confbinds = [bind.strip() for bind in
+                         config.get(DERBUILD_SECTION, BIND_OPT).split(",")]
+    except NoOptionError:
+        confbinds = []
+    binds = []
+    binds.extend(confbinds)
+    binds.extend(overrides[BIND_OPT])
+
+    env = BuildEnvironment(arch, rootdir, envvars, binds)
     env.setup(rootstrap, overdir)
 
     pkg = get_package(options.type, srcpkg_path, workdir, env)
