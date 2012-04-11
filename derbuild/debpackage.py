@@ -1,7 +1,7 @@
 import logging
-import deb822
 import os.path
 
+from debian import deb822
 from derbuild import DerbuildError
 from derbuild.utils import call
 
