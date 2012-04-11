@@ -1,5 +1,6 @@
 import logging
 import os.path
+import shutil
 
 from debian import deb822
 from derbuild import DerbuildError
