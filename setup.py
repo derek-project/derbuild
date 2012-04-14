@@ -28,7 +28,8 @@ setup(
             ],
         'srcpkgs':
             [
-                'application/x-debian-source-control = derbuild.debpackage:DebPackage'
+                'application/x-debian-source-control = derbuild.debpackage:DebPackage',
+                'application/x-redhat-package-manager = derbuild.rpmpackage:RpmPackage'
             ]
     },
     test_suite = "tests",
