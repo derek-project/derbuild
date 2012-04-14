@@ -22,7 +22,7 @@ class RpmPackage(object):
         """Build package."""
 
         LOG.debug("build")
-        self.env.execute("fakeroot rpmbuild --define='%_topdir %s' "
+        self.env.execute("fakeroot rpmbuild --define='%%_topdir %s' "
                          "--rebuild %s" % (self.workdir, self.srcrpm_path))
 
     def get_artifacts(self, outdir):
