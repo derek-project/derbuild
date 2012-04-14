@@ -30,6 +30,8 @@ class RpmPackage(object):
         """Copy built artifacts to given output directory."""
 
         rpmsdir = os.path.join(self.workdir, "RPMS")
+        LOG.debug("RPMS are in %s" % rpmsdir)
+        LOG.debug("ls: %r" % os.listdir(rpmsdir))
         artifacts = [os.path.join(rpmsdir, fname)
                      for fname in os.listdir(rpmsdir)
                      if os.path.isfile(os.path.join(rpmsdir, fname))]
