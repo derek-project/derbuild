@@ -23,7 +23,8 @@ class RpmPackage(object):
 
         LOG.debug("build")
         self.env.execute("fakeroot rpmbuild --define='%%_topdir %s' "
-                         "--rebuild %s" % (self.workdir, self.srcrpm_path))
+                         "--rebuild %s" % (self.workdir, self.srcrpm_path),
+                         cwd="/tmp")
 
     def get_artifacts(self, outdir):
         """Copy built artifacts to given output directory."""
