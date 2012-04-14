@@ -6,10 +6,11 @@ from derbuild import DerbuildError
 
 LOG = logging.getLogger(__name__)
 
-def call(cmd, cwd=".", env=None):
+def call(cmd, cwd=".", env=None, shell=False):
     """Run command in a new process."""
 
-    process = Popen(cmd, cwd=cwd, stdout=PIPE, stderr=STDOUT, env=env)
+    process = Popen(cmd, cwd=cwd, stdout=PIPE, stderr=STDOUT, env=env,
+                    shell=shell)
     while True:
         line = process.stdout.readline()
         LOG.info(line.strip('\n'))

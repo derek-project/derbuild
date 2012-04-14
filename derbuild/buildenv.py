@@ -75,7 +75,7 @@ class BuildEnvironment(object):
         LOG.debug("Executing `%s` inside env" % fullcmd)
         env = os.environ
         env.update(self.envvars)
-        call(fullcmd.split(), env=env)
+        call(fullcmd, env=env, shell=True)
 
     def destroy(self):
         """Do clean up."""
