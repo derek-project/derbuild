@@ -3,6 +3,7 @@ import os.path
 import shutil
 
 from debian import deb822
+from debian.debian_support import Version
 from derbuild import DerbuildError
 from derbuild.utils import call
 
@@ -32,22 +33,6 @@ class DebPackage(object):
         LOG.debug("Install deps command: %s" % cmd)
         return cmd
 
-    @property
-    def version_without_epoch(self):
-        """Return version without epoch."""
-
-        try:
-            _, ver = self.version.split(':')
-        except ValueError:
-            ver = self.version
-
-        return ver
-
-    @property
-    def version_upstream(self):
-        """Return upstream version."""
-        return "-".join(self.version_without_epoch.split('-')[:-1])
-
     def unpack(self):
         """Create build tree in working directory."""
 
@@ -58,8 +43,9 @@ class DebPackage(object):
         """Build package."""
 
         LOG.debug("build")
+        version = Version(self.version)
         builddir = os.path.join(self.workdir, "%s-%s" %
-                                             (self.name, self.version_upstream))
+                                          (self.name, version.upstream_version))
         self.env.execute("apt-get -y update", cwd=builddir)
         self.env.execute(self.install_deps_cmd, cwd=builddir)
         self.env.execute("dpkg-buildpackage -rfakeroot", cwd=builddir)
