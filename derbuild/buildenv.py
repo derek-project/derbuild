@@ -80,4 +80,5 @@ class BuildEnvironment(object):
     def destroy(self):
         """Do clean up."""
 
+        LOG.debug("removing the rootfs directory '%s'" % self.rootdir)
         shutil.rmtree(self.rootdir)

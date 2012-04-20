@@ -247,4 +247,5 @@ def main():
     # 4. Clean up
 
     env.destroy()
+    LOG.debug("removing the working directory '%s'" % options.workdir)
     shutil.rmtree(options.workdir)
